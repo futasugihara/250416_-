@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英語4択練習システム</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f0e8;
+    --surface: #fffdf7;
+    --surface2: #faf6ee;
+    --ink: #1a1410;
+    --ink2: #4a3f35;
+    --ink3: #7a6a5a;
+    --accent: #8b2020;
+    --accent2: #b84a00;
+    --gold: #c8952a;
+    --correct: #1a5c2a;
+    --correct-bg: #e8f5ec;
+    --wrong: #8b2020;
+    --wrong-bg: #fde8e8;
+    --border: #d4c8b0;
+    --shadow: rgba(26,20,16,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Serif JP', serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Decorative top stripe */
+  .top-stripe {
+    width: 100%;
+    height: 6px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--gold) 40%, var(--accent2) 100%);
+  }
+
+  header {
+    width: 100%;
+    max-width: 780px;
+    padding: 32px 24px 16px;
+    text-align: center;
+  }
+
+  .header-label {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--ink3);
+    margin-bottom: 8px;
+  }
+
+  h1 {
+    font-family: 'Libre Baskerville', serif;
+    font-size: clamp(22px, 4vw, 30px);
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+    line-height: 1.2;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .divider {
+    width: 60px;
+    height: 2px;
+    background: var(--gold);
+    margin: 16px auto;
+  }
+
+  /* Progress bar */
+  .progress-area {
+    width: 100%;
+    max-width: 780px;
+    padding: 0 24px 8px;
+  }
+
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .progress-label {
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--ink3);
+  }
+
+  .score-display {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 13px;
+    color: var(--ink2);
+  }
+
+  .score-display strong {
+    color: var(--correct);
+  }
+
+  .progress-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--gold), var(--accent2));
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Main quiz card */
+  main {
+    width: 100%;
+    max-width: 780px;
+    padding: 0 24px 40px;
+    flex: 1;
+  }
+
+  .quiz-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 24px var(--shadow), 0 1px 4px var(--shadow);
+    overflow: hidden;
+    animation: slideIn 0.35s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-header {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .q-number {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 13px;
+    color: var(--surface);
+    background: var(--accent);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .q-meta {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--ink3);
+    letter-spacing: 1px;
+  }
+
+  .card-body {
+    padding: 28px 28px 24px;
+  }
+
+  /* English sentence */
+  .sentence-en {
+    font-family: 'Libre Baskerville', serif;
+    font-size: clamp(16px, 2.5vw, 19px);
+    line-height: 1.75;
+    color: var(--ink);
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+  }
+
+  .blank {
+    display: inline-block;
+    min-width: 120px;
+    border-bottom: 2.5px solid var(--accent);
+    text-align: center;
+    color: var(--accent);
+    font-weight: 700;
+    font-style: italic;
+    padding: 0 8px;
+    transition: all 0.3s;
+  }
+
+  /* Japanese translation */
+  .sentence-jp {
+    font-size: 13px;
+    color: var(--ink3);
+    line-height: 1.7;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: var(--surface2);
+    border-left: 3px solid var(--gold);
+    border-radius: 0 3px 3px 0;
+    font-style: italic;
+  }
+
+  /* Choices */
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  @media (max-width: 500px) {
+    .choices { grid-template-columns: 1fr; }
+  }
+
+  .choice-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 4px;
+    padding: 13px 16px;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    font-family: 'Libre Baskerville', serif;
+    font-size: 14.5px;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+
+  .choice-btn:hover:not(:disabled) {
+    border-color: var(--accent2);
+    background: #fff8f0;
+    transform: translateY(-1px);
+  }
+
+  .choice-btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .choice-label {
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink3);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 2px 6px;
+    flex-shrink: 0;
+    margin-top: 1px;
+    transition: all 0.15s;
+  }
+
+  .choice-btn.correct {
+    border-color: var(--correct);
+    background: var(--correct-bg);
+    color: var(--correct);
+  }
+
+  .choice-btn.correct .choice-label {
+    background: var(--correct);
+    color: white;
+    border-color: var(--correct);
+  }
+
+  .choice-btn.wrong {
+    border-color: var(--wrong);
+    background: var(--wrong-bg);
+    color: var(--wrong);
+  }
+
+  .choice-btn.wrong .choice-label {
+    background: var(--wrong);
+    color: white;
+    border-color: var(--wrong);
+  }
+
+  .choice-btn.reveal {
+    border-color: var(--correct);
+    background: var(--correct-bg);
+    color: var(--correct);
+  }
+
+  .choice-btn.reveal .choice-label {
+    background: var(--correct);
+    color: white;
+    border-color: var(--correct);
+  }
+
+  .choice-btn:disabled {
+    cursor: default;
+  }
+
+  /* Feedback */
+  .feedback {
+    margin-top: 18px;
+    padding: 14px 18px;
+    border-radius: 4px;
+    font-size: 14px;
+    line-height: 1.65;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .feedback.correct {
+    background: var(--correct-bg);
+    border: 1px solid #b8d4c0;
+    color: var(--correct);
+    display: block;
+  }
+
+  .feedback.wrong {
+    background: var(--wrong-bg);
+    border: 1px solid #e4b8b8;
+    color: var(--wrong);
+    display: block;
+  }
+
+  .feedback-icon {
+    font-size: 18px;
+    margin-right: 6px;
+  }
+
+  .feedback strong {
+    font-family: 'Fira Code', monospace;
+    font-size: 15px;
+  }
+
+  /* Card footer */
+  .card-footer {
+    border-top: 1px solid var(--border);
+    padding: 16px 28px;
+    display: flex;
+    justify-content: flex-end;
+    background: var(--surface2);
+  }
+
+  .next-btn {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 28px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: background 0.15s, transform 0.1s;
+    display: none;
+  }
+
+  .next-btn:hover {
+    background: #6e1a1a;
+    transform: translateY(-1px);
+  }
+
+  .next-btn.visible {
+    display: inline-block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  /* Result screen */
+  .result-screen {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 4px 24px var(--shadow);
+    padding: 48px 32px;
+    text-align: center;
+    animation: slideIn 0.4s ease;
+    display: none;
+  }
+
+  .result-screen.visible { display: block; }
+  .quiz-card.hidden { display: none; }
+
+  .result-emoji {
+    font-size: 52px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .result-title {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .result-subtitle {
+    font-size: 14px;
+    color: var(--ink3);
+    margin-bottom: 32px;
+  }
+
+  .result-score-box {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    background: var(--surface2);
+    border: 2px solid var(--gold);
+    border-radius: 6px;
+    padding: 20px 40px;
+    margin-bottom: 32px;
+  }
+
+  .result-score-num {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .result-score-total {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 24px;
+    color: var(--ink3);
+  }
+
+  .result-percent {
+    font-family: 'Fira Code', monospace;
+    font-size: 15px;
+    color: var(--gold);
+    font-weight: 500;
+    display: block;
+    margin-top: 4px;
+  }
+
+  .result-grade {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 20px;
+    color: var(--ink2);
+    margin-bottom: 32px;
+    font-style: italic;
+  }
+
+  .restart-btn {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 13px 40px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: background 0.15s, transform 0.15s;
+  }
+
+  .restart-btn:hover {
+    background: #6e1a1a;
+    transform: translateY(-2px);
+  }
+
+  /* Decorative footer */
+  footer {
+    width: 100%;
+    text-align: center;
+    padding: 16px;
+    font-family: 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--ink3);
+    letter-spacing: 1px;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+  }
+
+  /* ===== PASSWORD SCREEN ===== */
+  #passwordScreen {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 24px;
+  }
+
+  #passwordScreen.hidden {
+    display: none;
+  }
+
+  .pw-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 8px 40px var(--shadow);
+    padding: 44px 40px 36px;
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    animation: slideIn 0.4s ease;
+  }
+
+  .pw-lock {
+    font-size: 36px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .pw-title {
+    font-family: 'Libre Baskerville', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+
+  .pw-subtitle {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 13px;
+    color: var(--ink3);
+    margin-bottom: 28px;
+    line-height: 1.6;
+  }
+
+  .pw-input-wrap {
+    position: relative;
+    margin-bottom: 14px;
+  }
+
+  .pw-input {
+    width: 100%;
+    padding: 13px 44px 13px 16px;
+    font-family: 'Fira Code', monospace;
+    font-size: 16px;
+    letter-spacing: 3px;
+    border: 1.5px solid var(--border);
+    border-radius: 3px;
+    background: var(--surface2);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.2s;
+    text-align: center;
+  }
+
+  .pw-input:focus {
+    border-color: var(--accent);
+  }
+
+  .pw-input.error {
+    border-color: var(--wrong);
+    animation: shake 0.35s ease;
+  }
+
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%      { transform: translateX(-8px); }
+    40%      { transform: translateX(8px); }
+    60%      { transform: translateX(-5px); }
+    80%      { transform: translateX(5px); }
+  }
+
+  .pw-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink3);
+    font-size: 16px;
+    padding: 4px;
+    line-height: 1;
+  }
+
+  .pw-error-msg {
+    font-size: 12px;
+    color: var(--wrong);
+    margin-bottom: 14px;
+    min-height: 18px;
+    font-family: 'Noto Serif JP', serif;
+  }
+
+  .pw-submit {
+    width: 100%;
+    padding: 13px;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .pw-submit:hover {
+    background: #6e1a1a;
+    transform: translateY(-1px);
+  }
+
+  .pw-submit:active {
+    transform: translateY(0);
+  }
+
+  .pw-divider {
+    width: 40px;
+    height: 2px;
+    background: var(--gold);
+    margin: 20px auto 0;
+  }
+
+  /* Main content hidden until auth */
+  #appContent {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #appContent.visible {
+    display: flex;
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== PASSWORD SCREEN ===== -->
+<div id="passwordScreen">
+  <div class="pw-card">
+    <span class="pw-lock">🔐</span>
+    <div class="pw-title">英語4択 練習問題</div>
+    <div class="pw-subtitle">このクイズにはパスワードが必要です。<br>先生から教えてもらったパスワードを入力してください。</div>
+    <div class="pw-input-wrap">
+      <input class="pw-input" type="password" id="pwInput" placeholder="パスワード"
+        onkeydown="if(event.key==='Enter') checkPassword()">
+      <button class="pw-toggle" onclick="togglePwVisibility()" title="表示/非表示">👁</button>
+    </div>
+    <div class="pw-error-msg" id="pwError"></div>
+    <button class="pw-submit" onclick="checkPassword()">クイズを始める →</button>
+    <div class="pw-divider"></div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP (hidden until password entered) ===== -->
+<div id="appContent">
+<div class="top-stripe"></div>
+
+<header>
+  <div class="header-label">English Vocabulary Quiz</div>
+  <h1>英語 <span>4択</span> 練習問題</h1>
+  <div class="divider"></div>
+</header>
+
+<div class="progress-area">
+  <div class="progress-meta">
+    <span class="progress-label" id="progressLabel">問題 1 / 12</span>
+    <span class="score-display">正解数: <strong id="scoreCount">0</strong></span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+  </div>
+</div>
+
+<main>
+  <div class="quiz-card" id="quizCard">
+    <div class="card-header">
+      <div class="q-number" id="qNumber">1</div>
+      <div>
+        <div class="q-meta">FILL IN THE BLANK</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="sentence-en" id="sentenceEn"></div>
+      <div class="sentence-jp" id="sentenceJp"></div>
+      <div class="choices" id="choices"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+    <div class="card-footer">
+      <button class="next-btn" id="nextBtn" onclick="nextQuestion()">次の問題へ →</button>
+    </div>
+  </div>
+
+  <div class="result-screen" id="resultScreen">
+    <span class="result-emoji" id="resultEmoji">🎉</span>
+    <div class="result-title">クイズ終了！</div>
+    <div class="result-subtitle">全12問お疲れさまでした</div>
+    <div class="result-score-box">
+      <span class="result-score-num" id="finalScore">0</span>
+      <span class="result-score-total"> / 12</span>
+    </div>
+    <div class="result-percent" id="finalPercent">0%</div>
+    <div class="result-grade" id="resultGrade"></div>
+    <button class="restart-btn" onclick="restart()">もう一度挑戦する</button>
+  </div>
+</main>
+
+<footer>英語4択練習システム &nbsp;·&nbsp; 受験対策</footer>
+</div><!-- /#appContent -->
+
+<script>
+  // ==============================
+  // ★ パスワードをここで設定してください ★
+  // ==============================
+  const QUIZ_PASSWORD = "english2024";
+  // ==============================
+
+  function checkPassword() {
+    const input = document.getElementById('pwInput').value;
+    const errorEl = document.getElementById('pwError');
+    if (input === QUIZ_PASSWORD) {
+      document.getElementById('passwordScreen').classList.add('hidden');
+      document.getElementById('appContent').classList.add('visible');
+      init();
+    } else {
+      errorEl.textContent = "パスワードが違います。もう一度入力してください。";
+      const inp = document.getElementById('pwInput');
+      inp.classList.add('error');
+      inp.value = '';
+      setTimeout(() => inp.classList.remove('error'), 400);
+    }
+  }
+
+  function togglePwVisibility() {
+    const inp = document.getElementById('pwInput');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  }
+
+const questions = [
+  {
+    id: "011",
+    en: "The new regulation does not (　　) such medical accidents.",
+    jp: "その新しい規則はそのような医療事故には適用されない。",
+    answer: "apply to",
+    choices: ["make sense", "apply to", "mean of", "offend"]
+  },
+  {
+    id: "012",
+    en: "We've tried to (　　) the insects in our house, but they are still everywhere.",
+    jp: "家の中の虫を取り除こうとしたが、まだあちこちにいる。",
+    answer: "get rid of",
+    choices: ["get out of", "get rid of", "take hold of", "make fun of"]
+  },
+  {
+    id: "013",
+    en: "According (　　) a survey, the American economy will pick up next year.",
+    jp: "調査によると、アメリカ経済は来年回復するだろう。",
+    answer: "to",
+    choices: ["of", "in", "to", "from"]
+  },
+  {
+    id: "014",
+    en: "Your bicycle is (　　) to mine, but it isn't exactly the same.",
+    jp: "あなたの自転車は私のに似ているが、まったく同じではない。",
+    answer: "similar",
+    choices: ["similar", "simple", "damaged", "used"]
+  },
+  {
+    id: "015",
+    en: "You shouldn't look (　　) him just because he's younger than us.",
+    jp: "彼が私たちより若いからといって見下してはいけない。",
+    answer: "down on",
+    choices: ["down on", "forward to", "over to", "out with"]
+  },
+  {
+    id: "016",
+    en: "The naive customers were easily (　　) by the street salesman's smooth way of talking.",
+    jp: "世間知らずの客は、街のセールスマンの巧みな話し方に簡単にだまされた。",
+    answer: "taken in",
+    choices: ["given up", "taken off", "taken in", "brought up"]
+  },
+  {
+    id: "017",
+    en: "I'm rather (　　) about my driving test next week.",
+    jp: "来週の運転試験についてかなり不安だ。",
+    answer: "anxious",
+    choices: ["sensational", "unknown", "anxious", "dreadful"]
+  },
+  {
+    id: "018",
+    en: "What is commonly called peace is not peace at all; mere absence of fighting is not peace. (　　), if you want peace, you will have to fight for it.",
+    jp: "一般に平和と呼ばれるものは本当の平和ではない。単に戦いがないだけでは平和ではない。むしろ、平和を望むなら戦わなければならない。",
+    answer: "On the contrary",
+    choices: ["In spite of that", "To make matters worse", "On the contrary", "Otherwise"]
+  },
+  {
+    id: "019",
+    en: "It took me (　　) to solve the problem.",
+    jp: "その問題を解くのに1時間半かかった。",
+    answer: "an hour and a half",
+    choices: ["one and half hour", "an hour and a half", "an hour and half", "one hour and half"]
+  },
+  {
+    id: "020",
+    en: "I took (　　) extra work only a few weeks ago.",
+    jp: "私はほんの数週間前に追加の仕事を引き受けた。",
+    answer: "on",
+    choices: ["after", "out to", "off", "on"]
+  },
+  {
+    id: "021",
+    en: "A: When will you be here? The party has already started!  B: I'm on my (　　) now. I'll be there in a minute.",
+    jp: "A：いつ来るの？もうパーティー始まってるよ！　B：今向かってるところ。すぐ着くよ。",
+    answer: "way",
+    choices: ["road", "route", "travels", "way"]
+  },
+  {
+    id: "022",
+    en: "A: You look so cold. What happened?  B: I was caught (　　) a shower on my way to school.",
+    jp: "A：とても寒そうだね。どうしたの？　B：学校へ行く途中でにわか雨にあったんだ。",
+    answer: "in",
+    choices: ["for", "in", "with", "on"]
+  }
+];
+
+// Shuffle array helper
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let current = 0;
+let score = 0;
+let answered = false;
+let shuffledQuestions = [];
+
+const labels = ["①", "②", "③", "④"];
+
+function init() {
+  shuffledQuestions = shuffle(questions);
+  current = 0;
+  score = 0;
+  answered = false;
+  document.getElementById('quizCard').classList.remove('hidden');
+  document.getElementById('resultScreen').classList.remove('visible');
+  updateScore();
+  renderQuestion();
+}
+
+function renderQuestion() {
+  answered = false;
+  const q = shuffledQuestions[current];
+  const shuffledChoices = shuffle(q.choices);
+
+  document.getElementById('qNumber').textContent = current + 1;
+  document.getElementById('progressLabel').textContent = `問題 ${current + 1} / ${shuffledQuestions.length}`;
+  document.getElementById('progressFill').style.width = `${(current / shuffledQuestions.length) * 100}%`;
+
+  // Sentence with blank styled
+  document.getElementById('sentenceEn').innerHTML =
+    q.en.replace('(　　)', '<span class="blank">　　　</span>');
+  document.getElementById('sentenceJp').textContent = q.jp;
+
+  // Choices
+  const choicesEl = document.getElementById('choices');
+  choicesEl.innerHTML = '';
+  shuffledChoices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<span class="choice-label">${labels[i]}</span><span>${choice}</span>`;
+    btn.onclick = () => selectAnswer(choice, q.answer, shuffledChoices);
+    choicesEl.appendChild(btn);
+  });
+
+  // Reset feedback
+  const fb = document.getElementById('feedback');
+  fb.className = 'feedback';
+  fb.innerHTML = '';
+
+  const nextBtn = document.getElementById('nextBtn');
+  nextBtn.className = 'next-btn';
+  nextBtn.textContent = current === shuffledQuestions.length - 1 ? '結果を見る →' : '次の問題へ →';
+
+  // Animate card
+  const card = document.getElementById('quizCard');
+  card.style.animation = 'none';
+  card.offsetHeight; // reflow
+  card.style.animation = 'slideIn 0.35s ease';
+}
+
+function selectAnswer(selected, correct, allChoices) {
+  if (answered) return;
+  answered = true;
+
+  const isCorrect = selected === correct;
+  if (isCorrect) score++;
+  updateScore();
+
+  // Color buttons
+  const btns = document.querySelectorAll('.choice-btn');
+  btns.forEach(btn => {
+    btn.disabled = true;
+    const text = btn.querySelector('span:last-child').textContent;
+    if (text === correct) {
+      btn.classList.add(isCorrect && text === selected ? 'correct' : 'reveal');
+    } else if (text === selected && !isCorrect) {
+      btn.classList.add('wrong');
+    }
+  });
+
+  // Fill blank with answer
+  document.querySelector('.blank').textContent = correct;
+  document.querySelector('.blank').style.color = isCorrect ? 'var(--correct)' : 'var(--accent)';
+
+  // Feedback
+  const fb = document.getElementById('feedback');
+  if (isCorrect) {
+    fb.className = 'feedback correct';
+    fb.innerHTML = `<span class="feedback-icon">✓</span> <strong>正解！</strong> "${correct}" が正しい答えです。`;
+  } else {
+    fb.className = 'feedback wrong';
+    fb.innerHTML = `<span class="feedback-icon">✗</span> 不正解。正解は <strong>"${correct}"</strong> です。`;
+  }
+
+  document.getElementById('nextBtn').classList.add('visible');
+}
+
+function updateScore() {
+  document.getElementById('scoreCount').textContent = score;
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= shuffledQuestions.length) {
+    showResult();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showResult() {
+  document.getElementById('quizCard').classList.add('hidden');
+  const rs = document.getElementById('resultScreen');
+  rs.classList.add('visible');
+
+  const pct = Math.round((score / shuffledQuestions.length) * 100);
+  document.getElementById('finalScore').textContent = score;
+  document.getElementById('finalPercent').textContent = `正答率 ${pct}%`;
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('progressLabel').textContent = `全 ${shuffledQuestions.length} 問 完了`;
+
+  let emoji, grade;
+  if (pct === 100) { emoji = '🏆'; grade = '満点！完璧な成績です！'; }
+  else if (pct >= 83) { emoji = '🎉'; grade = '素晴らしい！あと少しで満点！'; }
+  else if (pct >= 67) { emoji = '👍'; grade = 'よくできました！復習して確実にしよう。'; }
+  else if (pct >= 50) { emoji = '📖'; grade = 'もう少し練習が必要です。頑張ろう！'; }
+  else { emoji = '💪'; grade = '復習して再挑戦しよう！'; }
+
+  document.getElementById('resultEmoji').textContent = emoji;
+  document.getElementById('resultGrade').textContent = grade;
+}
+
+function restart() {
+  document.getElementById('resultScreen').classList.remove('visible');
+  init();
+}
+
+// init() is called after password is entered correctly
+</script>
+</body>
+</html>
